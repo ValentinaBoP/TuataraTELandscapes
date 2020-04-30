@@ -1,5 +1,5 @@
 ---
-title: "Tuatara TE Landscape"
+title: "Tuatara DNA and SINE Landscape"
 author: "Valentina Peona"
 date: "March 26, 2018"
 output:

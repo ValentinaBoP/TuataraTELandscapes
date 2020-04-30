@@ -1,0 +1,546 @@
+---
+title: "Tuatara TE Landscape"
+author: "Valentina"
+date: "March 26, 2018"
+output:
+  html_document:
+    toc: true
+---
+
+# Tuatara TE activity
+
+INPUT: output of `calcDivergence.pl` with Kimura distance `tuatara_30Sep2015_rUdWx.fasta.align.k2p.noCpG.size` created on 23 March 2018, stored in `/proj/sllstore2017073/nobackup/b2017197/private/Valentina/2018Tuatara/2.ActivityLandscape`
+
+```{r input, warning=FALSE, message=FALSE, warning = FALSE}
+# libraries required
+library(data.table)
+library(dplyr)
+library(ggplot2)
+library(RColorBrewer)
+
+# read and subset the main input file
+TUATARA = fread(file = "tuatara_30Sep2015_rUdWx.fasta.align.k2p.noCpG.size", header = F, sep = "\t", stringsAsFactors = F)
+TUATARA = TUATARA[,c(5,6,7,8,10,11,17,16)]
+names(TUATARA) = c("Scaffold", "Begin", "End", "Length", "Strand", "Element", "Divergence", "ID")
+
+# delete elements with divergence greater than 1 
+TUATARA = TUATARA[TUATARA$Divergence < 1,]
+TUATARA[grepl(pattern = 'MER131', x = TUATARA$Element)] = 'MER131#SINE?'
+# correct some SINE names
+nomi = read.table(text = 'THER1c_tua#SINE/MIR tuaMIR-a1#SINE/MIR
+THER1d_tua#SINE/MIR tuaMIR-a2#SINE/MIR
+THER1b_tua#SINE/MIR tuaMIR-a3#SINE/MIR
+THER1a_tua#SINE/MIR tuaMIR-a4#SINE/MIR
+SINE2-2-L_tua#SINE/tRNA tuaMIR-b1#SINE/MIR
+MIR3-L_tua#SINE/MIR tuaMIR-b2#SINE/MIR
+MIR1-L_tua#SINE/MIR tuaMIR-b3#SINE/MIR
+MIR_Aves1b_tua#SINE/MIR tuaMIR-c1#SINE/MIR
+MIR_Aves1a_tua#SINE/MIR tuaMIR-c2#SINE/MIR
+MIR-L_tua#SINE/MIR  tuaMIR-c3#SINE/MIR', header = F, comment.char = '')
+for(i in 1:nrow(nomi)){
+  TUATARA$Element = gsub(pattern = nomi[i,1], replacement = nomi[i,2], x = TUATARA$Element)
+}
+```
+
+## DNA TEs
+
+```{r}
+# subset for DNA elements
+DNA = TUATARA[grepl(pattern = 'DNA', x = TUATARA$Element),]
+DNA$Subfamily = sapply(strsplit(as.character(DNA$Element), "#"), "[[", 1)
+DNA$Superfamily = sapply(strsplit(as.character(DNA$Element), "#"), "[[", 2)
+DNA$Divergence = DNA$Divergence * 100
+DNA$RoundDiv = floor(DNA$Divergence)
+DNA$Factor = paste(DNA$Subfamily, DNA$RoundDiv, sep = "$")
+```
+
+### General landscape - bps occupied
+
+```{r}
+
+
+PATTERN = c("Charlie1-L_tua", "Chompy-2a_tua", "DNA-1_Gav", "Harbinger-2-L_tua", "Harbinger-3-L_tua", "Harbinger-7_CPB", "hAT-11_AMi", "hAT-12_Crp", "hAT-12B_Crp", "hAT-1598-L_tua", "hAT-17_Croc", "hAT-17B_Croc", "hAT-2_Crp", "hAT-29-L_tua", "hAT-39_tua", "hAT-4_AMi", "hAT-4B_AMi", "hAT-6_AMi", "hAT-66-L-tua", "hAT-7-L-tua", "hAT-N11-L_tua", "hAT-N18-Lb_tua", "hAT-N18_tua", "hAT6-N1_Croc", "hATN-3-La_tua", "hATN-3-Lb_tua", "hATN-3-Lc_tua", "hATN-3-Ld_tua", "MER45B-L_tua", "MER45R-La_tua", "MER45R-Lb_tua", "MER45R-Lc_tua", "nhAT-3-La_tua", "piggyBac-1-Lb_tua", "Polinton-1_AMi", "Polinton-1_tua.inc", "Polinton-2_AMi", "REP131", "tuaDNA10", "tuaDNA11", "tuaDNA12", "tuaDNA13", "tuaDNA14", "tuaDNA17", "tuaDNA18", "tuaDNA19", "tuaDNA1a", "tuaDNA1b", "tuaDNA1c", "tuaDNA1d", "tuaDNA20", "tuaDNA21", "tuaDNA22", "tuaDNA23", "tuaDNA2a", "tuaDNA2b", "tuaDNA3a", "tuaDNA3b", "tuaDNA4", "tuaDNA5", "tuaDNA6", "tuaDNA7", "tuaDNA8", "tuaDNA9", "tuaDNAL-1")
+
+REPLACEMENT = c("Charlie1_tua", "Chompy-2_tua", "DNA-1_Gav", "Harbinger_tua", "Harbinger_tua", "Harbinger_CPB", "hAT_AMi", "hAT_Crp", "hAT_Crp", "hAT_tua", "hAT_Croc", "hAT_Croc", "hAT_Crp", "hAT_tua", "hAT_tua", "hAT_AMi", "hAT_AMi", "hAT_AMi", "hAT_tua", "hAT_tua", "hAT_tua", "hAT_tua", "hAT_tua", "hAT_Croc", "hATN_tua", "hATN_tua", "hATN_tua", "hATN_tua", "MER45_tua", "MER45_tua", "MER45_tua", "MER45_tua", "nhAT_tua", "piggyBac-1_tua", "Polinton_AMi", "Polinton_tua", "Polinton_AMi", "REP131", "tuaDNA", "tuaDNA", "tuaDNA", "tuaDNA", "tuaDNA", "tuaDNA", "tuaDNA", "tuaDNA", "tuaDNA", "tuaDNA", "tuaDNA", "tuaDNA", "tuaDNA", "tuaDNA", "tuaDNA", "tuaDNA", "tuaDNA", "tuaDNA", "tuaDNA", "tuaDNA", "tuaDNA", "tuaDNA", "tuaDNA", "tuaDNA", "tuaDNA", "tuaDNA", "tuaDNA")
+
+for(i in 1:length(PATTERN)){
+  
+  data$Superfamily[data$Subfamily == PATTERN[i]] = REPLACEMENT[i]
+}
+
+coldna = character()
+colfunc <- colorRampPalette(c("#BCBDDC", "#3F007D"))
+coldna = c(coldna, colfunc(6)[c(1,2,3,4,5)])
+colfunc <- colorRampPalette(c("lightgreen", "darkgreen"))
+coldna = c(coldna, colfunc(4))
+colfunc <- colorRampPalette(c("#6BAED6", "#08306B"))
+coldna = c(coldna, colfunc(4))
+colfunc <- colorRampPalette(c("gold", "red3"))
+coldna = c(coldna, colfunc(8)[c(1,3,5,7)])
+
+ggplot(data = data, aes(x = as.integer(Divergence), y = Mb, fill = factor(Superfamily))) + geom_bar(stat = "identity") + scale_fill_manual(name = "DNA Subfamilies", values = as.character(coldna)) + theme_bw() + theme(panel.border = element_rect(colour = 'darkgrey', fill = NA)) + xlab("Divergence")
+
+DNA_general_bps = ggplot(data = data, aes(x = as.integer(Divergence), y = Mb, fill = factor(Superfamily))) + geom_bar(stat = "identity") + scale_fill_manual(name = "DNA Subfamilies", values = as.character(coldna)) + theme_bw() + theme(panel.border = element_rect(colour = 'darkgrey', fill = NA)) + xlab("Divergence")
+ggsave(filename = 'Tuatara_DNA_landscape_bps_white.png', plot = DNA_general_bps, device = "png", width = 50, height = 27, units = "cm", scale = .5)
+```
+
+```{r}
+# get bps occupied for each subfamily
+DNA_bps = aggregate(Length ~ Factor, DNA, sum)
+DNA_bps$Subfamily = sapply(strsplit(DNA_bps$Factor, "\\$"), "[[", 1)
+DNA_bps$Divergence = sapply(strsplit(DNA_bps$Factor, "\\$"), "[[", 2)
+# conversion in megabases
+DNA_bps$Mb = DNA_bps$Length / 1000000
+DNA_bps_sub = DNA_bps[DNA_bps$Mb > 0.05,]
+
+data = DNA_bps_sub
+
+PATTERN = c("Charlie1-L_tua", "Chompy-2a_tua", "DNA-1_Gav", "Harbinger-2-L_tua", "Harbinger-3-L_tua", "Harbinger-7_CPB", "hAT-11_AMi", "hAT-12_Crp", "hAT-12B_Crp", "hAT-1598-L_tua", "hAT-17_Croc", "hAT-17B_Croc", "hAT-2_Crp", "hAT-29-L_tua", "hAT-39_tua", "hAT-4_AMi", "hAT-4B_AMi", "hAT-6_AMi", "hAT-66-L-tua", "hAT-7-L-tua", "hAT-N11-L_tua", "hAT-N18-Lb_tua", "hAT-N18_tua", "hAT6-N1_Croc", "hATN-3-La_tua", "hATN-3-Lb_tua", "hATN-3-Lc_tua", "hATN-3-Ld_tua", "MER45B-L_tua", "MER45R-La_tua", "MER45R-Lb_tua", "MER45R-Lc_tua", "nhAT-3-La_tua", "piggyBac-1-Lb_tua", "Polinton-1_AMi", "Polinton-1_tua.inc", "Polinton-2_AMi", "REP131", "tuaDNA10", "tuaDNA11", "tuaDNA12", "tuaDNA13", "tuaDNA14", "tuaDNA17", "tuaDNA18", "tuaDNA19", "tuaDNA1a", "tuaDNA1b", "tuaDNA1c", "tuaDNA1d", "tuaDNA20", "tuaDNA21", "tuaDNA22", "tuaDNA23", "tuaDNA2a", "tuaDNA2b", "tuaDNA3a", "tuaDNA3b", "tuaDNA4", "tuaDNA5", "tuaDNA6", "tuaDNA7", "tuaDNA8", "tuaDNA9", "tuaDNAL-1")
+
+REPLACEMENT = c("Charlie1_tua", "Chompy-2_tua", "DNA-1_Gav", "Harbinger_tua", "Harbinger_tua", "Harbinger_CPB", "hAT_AMi", "hAT_Crp", "hAT_Crp", "hAT_tua", "hAT_Croc", "hAT_Croc", "hAT_Crp", "hAT_tua", "hAT_tua", "hAT_AMi", "hAT_AMi", "hAT_AMi", "hAT_tua", "hAT_tua", "hAT_tua", "hAT_tua", "hAT_tua", "hAT_Croc", "hATN_tua", "hATN_tua", "hATN_tua", "hATN_tua", "MER45_tua", "MER45_tua", "MER45_tua", "MER45_tua", "nhAT_tua", "piggyBac-1_tua", "Polinton_AMi", "Polinton_tua", "Polinton_AMi", "REP131",  "tuaDNA10", "tuaDNA11", "tuaDNA12", "tuaDNA13", "tuaDNA14", "tuaDNA17", "tuaDNA18", "tuaDNA19", "tuaDNA1a", "tuaDNA1b", "tuaDNA1c", "tuaDNA1d", "tuaDNA20", "tuaDNA21", "tuaDNA22", "tuaDNA23", "tuaDNA2a", "tuaDNA2b", "tuaDNA3a", "tuaDNA3b", "tuaDNA4", "tuaDNA5", "tuaDNA6", "tuaDNA7", "tuaDNA8", "tuaDNA9", "tuaDNAL-1")
+
+for(i in 1:length(PATTERN)){
+  
+  data$Superfamily[data$Subfamily == PATTERN[i]] = REPLACEMENT[i]
+}
+
+data$Superfamily = factor(x = data$Superfamily, levels = c("Charlie1_tua", "Harbinger_CPB", "Harbinger_tua", "hAT_AMi", "hAT_Croc", "hAT_Crp", "hAT_tua", "hATN_tua", "MER45_tua", "nhAT_tua", "Chompy-2_tua", "DNA-1_Gav", "piggyBac-1_tua", "Polinton_AMi", "Polinton_tua", "REP131", "tuaDNA10", "tuaDNA11", "tuaDNA12", "tuaDNA13", "tuaDNA14", "tuaDNA17", "tuaDNA18", "tuaDNA19", "tuaDNA1a", "tuaDNA1b", "tuaDNA1c", "tuaDNA1d", "tuaDNA20", "tuaDNA21", "tuaDNA22", "tuaDNA23", "tuaDNA2a", "tuaDNA2b", "tuaDNA3a", "tuaDNA3b", "tuaDNA4", "tuaDNA5", "tuaDNA6", "tuaDNA7", "tuaDNA8", "tuaDNA9", "tuaDNAL-1"))
+
+coldna = character()
+colfunc <- colorRampPalette(c("#BCBDDC", "#3F007D"))
+coldna = c(coldna, colfunc(5)[c(1,2,4)])
+colfunc <- colorRampPalette(c("lightgreen", "darkgreen"))
+coldna = c(coldna, colfunc(7))
+colfunc <- colorRampPalette(c("#6BAED6", "#08306B"))
+coldna = c(coldna, colfunc(3))
+colfunc <- colorRampPalette(c("gold", "red3"))
+coldna = c(coldna, colfunc(8)[c(1,3,5)])
+#27 tuaDNA
+colfunc <- colorRampPalette(c("#E25C00", "red4"))
+coldna = c(coldna, colfunc(27))
+
+ggplot(data = data, aes(x = as.integer(Divergence), y = Mb, fill = factor(Superfamily))) + geom_bar(stat = "identity") + scale_fill_manual(name = "DNA Subfamilies", values = as.character(coldna), breaks = c("Charlie1_tua", "Harbinger_CPB", "Harbinger_tua", "hAT_AMi", "hAT_Croc", "hAT_Crp", "hAT_tua", "hATN_tua", "MER45_tua", "nhAT_tua", "Chompy-2_tua", "DNA-1_Gav", "piggyBac-1_tua", "Polinton_AMi", "Polinton_tua", "tuaDNA10"), labels = c("Charlie1_tua", "Harbinger_CPB", "Harbinger_tua", "hAT_AMi", "hAT_Croc", "hAT_Crp", "hAT_tua", "hATN_tua", "MER45_tua", "nhAT_tua", "Chompy-2_tua", "DNA-1_Gav", "piggyBac-1_tua", "Polinton_AMi", "Polinton_tua", "tuaDNA [27 families merged]")) + theme_bw()  + theme(panel.border = element_rect(colour = 'darkgrey', fill = NA)) + xlab("Divergence")
+#ggsave(filename = 'Tuatara_DNA_landscape_bps_white_2.0.png', device = "png", width = 50, height = 27, units = "cm", scale = .5)
+ggsave(filename = 'Tuatara_DNA_landscape_bps_white_2.0.pdf', device = "pdf", width = 50, height = 27, units = "cm", scale = .5)
+```
+
+### DNA elements recent activity
+```{r}
+# zoom in the divergence from 0 to 5%
+
+data = DNA_bps
+data$Divergence = as.integer(data$Divergence)
+data = data[data$Divergence <= 5,]
+data$Subfamily = factor(x = data$Subfamily, levels = c("Chompy-1_Croc", "Chompy-198_AMi", "Chompy-2_Croc", "Chompy-2353_AMi", "Chompy-2a_tua", "Chompy-2b-tua", "Chompy-3_Croc", "Chompy-4-L_tua", "Chompy-4_Croc", "Chompy-5_Croc", "DNA-1_Gav", "DNA-4_ACar", "Eulor10", "Eulor2A", "Eulor5A", "Eulor9C", "Charlie1-L_tua", "Harbinger-1_AMi", "Harbinger-1_CPB", "Harbinger-1B_Crp", "Harbinger-1C_Crp", "Harbinger-1D_Crp", "Harbinger-2-L_tua", "Harbinger-3-L_tua", "Harbinger-3_Crp", "Harbinger-4B_CPB", "Harbinger-5E_CPB", "Harbinger-6_CPB", "Harbinger-9_CPB", "Harbinger-N1_Croc", "Harbinger-N276_AMi", "Harbinger-N96_AMi", "hAT-1_AMi", "hAT-1_CPB", "hAT-1_tua", "hAT-1001f_Croc", "hAT-1082_Gav", "hAT-11_AMi", "hAT-11_Crp", "hAT-12_AMi", "hAT-13_AMi", "hAT-13_Crp", "hAT-13_tua", "hAT-1598-L_tua", "hAT-16_CPB", "hAT-17_Croc", "hAT-17B_Croc", "hAT-18_Crp", "hAT-188_Gav", "hAT-19_CPB", "hAT-1960_Ami", "hAT-197_Crp", "hAT-1N1_AC", "hAT-20_CPB", "hAT-208_Ami", "hAT-21_CPB", "hAT-23_CPB", "hAT-24_CPB", "hAT-243_Crp", "hAT-25N1_CPB", "hAT-28_CPB", "hAT-29-L_tua", "hAT-3_AMi", "hAT-3_Gav", "hAT-310_Ami", "hAT-33_CPB", "hAT-39_tua", "hAT-4_AMi", "hAT-4_Crp", "hAT-4_tua", "hAT-4B_AMi", "hAT-4C_ACar", "hAT-5_Croc", "hAT-504_Gav", "hAT-6_AMi", "hAT-66-L-tua", "hAT-7-L-tua", "hAT-7_AMi", "hAT-732_Ami", "hAT-886_Ami", "hAT-892_Gav", "hAT-9_AMi", "hAT-N1-L_tua", "hAT-N10_ACar", "hAT-N10_AMi", "hAT-N1001d_Croc", "hAT-N11-L_tua", "hAT-N11_ACar", "hAT-N11_AMi", "hAT-N11B_AMi", "hAT-N12_CPB", "hAT-N13_AMi", "hAT-N143_AMi", "hAT-N1591_AMi", "hAT-N16_AMi", "hAT-N16_Crp", "hAT-N18-La_tua", "hAT-N18-Lb_tua", "hAT-N18_AMi", "hAT-N18_Crp", "hAT-N18_tua", "hAT-N19_AMi", "hAT-N22_CPB", "hAT-N25_CPB", "hAT-N32_Crp", "hAT-N37_CPB", "hAT-N4_ACar", "hAT-N5_ACar", "hAT-N592_AMi", "hAT-N6_ACar", "hAT-N647_AMi", "hAT-N689_AMi", "hAT-N694_AMi", "hAT-N7_ACar", "hAT-N9_AMi", "hAT-N9B_ACar", "hAT6-N1_Croc", "hATN-3-La_tua", "hATN-3-Lb_tua", "hATN-3-Lc_tua", "hATN-3-Ld_tua", "MER133A", "MER133B", "MER134", "MER45B-L_tua", "MER45R-La_tua", "MER45R-Lb_tua", "MER45R-Lc_tua", "MER58D-L_tua", "nhAT-3-La_tua", "nhAT-3-Lb_tua", "Academ-1_AMi", "Chapaev3-1_AC", "piggyBac-1-La_tua", "piggyBac-1-Lb_tua", "piggyBac-1_AMi", "Helitron-1_AC", "Mariner-1_Crp", "Mariner-3_AMi", "Mariner-7_Croc", "Mariner-N1C_ACar", "Mariner-N9_Crp", "tuaMar1", "Polinton-1_tua.inc", "REP131", "UCON29", "Zator-2_tua", "tuaDNA10", "tuaDNA11", "tuaDNA12", "tuaDNA13", "tuaDNA14", "tuaDNA15", "tuaDNA16", "tuaDNA17", "tuaDNA18", "tuaDNA19", "tuaDNA1a", "tuaDNA1b", "tuaDNA1c", "tuaDNA1d", "tuaDNA20", "tuaDNA21", "tuaDNA22", "tuaDNA23", "tuaDNA2a", "tuaDNA2b", "tuaDNA3a", "tuaDNA3b", "tuaDNA4", "tuaDNA5", "tuaDNA6", "tuaDNA7", "tuaDNA8", "tuaDNA9", "tuaDNAL-1"))
+coldna = character()
+colfunc <- colorRampPalette(c("red4", "#E25C00"))
+coldna = c(coldna, colfunc(16))
+colfunc <- colorRampPalette(c("#E25C00", "gold"))
+coldna = c(coldna, colfunc(17)[c(2:17)])
+colfunc <- colorRampPalette(c("lightgreen", "darkgreen"))
+coldna = c(coldna, colfunc(50))
+colfunc <- colorRampPalette(c("#6BAED6", "#08306B"))
+coldna = c(coldna, colfunc(49))
+colfunc <- colorRampPalette(c("#BCBDDC", "#3F007D"))
+coldna = c(coldna, colfunc(16))
+colfunc <- colorRampPalette(c("grey50", "grey90"))
+coldna = c(coldna, colfunc(29))
+
+
+
+ggplot(data = data, aes(x = as.integer(Divergence), y = Mb, fill = factor(Subfamily))) + geom_bar(stat = "identity") + scale_fill_manual(name = "DNA Subfamilies", values = as.character(coldna)) + theme_bw()  + theme(panel.border = element_rect(colour = 'darkgrey', fill = NA)) + xlab("Divergence")
+ggsave(filename = 'Tuatara_DNA_landscape_bps_recent_white.png', device = "png", width = 85, height = 30, units = "cm", scale = .5)
+```
+
+```{r}
+data = DNA_bps
+data$Divergence = as.integer(data$Divergence)
+data = data[data$Divergence <= 5 & data$Length >= 10000,]
+data$Subfamily = factor(x = data$Subfamily, levels = c("Charlie1-L_tua", "Harbinger-2-L_tua", "Harbinger-3-L_tua", "hAT-1_AMi", "hAT-1_tua", "hAT-13_tua", "hAT-21_CPB", "hAT-29-L_tua", "hAT-66-L-tua", "hATN-3-Ld_tua", "MER45R-La_tua", "MER45R-Lb_tua", "nhAT-3-Lb_tua", "Mariner-1_Crp", "piggyBac-1-Lb_tua", "Polinton-1_tua.inc", "tuaDNA14", "tuaDNA1a", "tuaDNA1b", "tuaDNA1c", "tuaDNA1d", "tuaDNA21", "tuaDNA22", "tuaDNA23", "tuaDNA2a", "tuaDNA2b", "tuaDNA5", "tuaDNA6", "tuaDNA8", "tuaDNAL-1"))
+
+coldna = character()
+colfunc <- colorRampPalette(c("#BCBDDC", "#3F007D"))
+coldna = c(coldna, colfunc(5)[c(1,2,4)])
+colfunc <- colorRampPalette(c("lightgreen", "darkgreen"))
+coldna = c(coldna, colfunc(10))
+colfunc <- colorRampPalette(c("#6BAED6", "#08306B"))
+coldna = c(coldna, colfunc(3))
+colfunc <- colorRampPalette(c("gold", "red3"))
+coldna = c(coldna, colfunc(14))
+
+ggplot(data = data, aes(x = as.integer(Divergence), y = Mb, fill = factor(Subfamily))) + geom_bar(stat = "identity") + scale_fill_manual(name = "DNA Subfamilies", values = as.character(coldna)) + theme_bw()  + theme(panel.border = element_rect(colour = 'darkgrey', fill = NA)) + xlab("Divergence")
+ggsave(filename = 'Tuatara_DNA_landscape_bps_recent_white_2.0.png', device = "png", width = 45, height = 30, units = "cm", scale = .5)
+ggsave(filename = 'Tuatara_DNA_landscape_bps_recent_white_2.1.png', device = "png", width = 45, height = 30, units = "cm", scale = .5, dpi = 600)
+ggsave(filename = 'Tuatara_DNA_landscape_bps_recent_white_2.1.tiff', device = "tiff", width = 45, height = 30, units = "cm", scale = .5, dpi = 600)
+```
+
+## SINE elements
+
+```{r}
+SINE = TUATARA[grepl(pattern = 'SINE', x = TUATARA$Element),]
+SINE$Subfamily = sapply(strsplit(as.character(SINE$Element), "#"), "[[", 1)
+SINE$Superfamily = sapply(strsplit(as.character(SINE$Element), "#"), "[[", 2)
+SINE$Divergence = SINE$Divergence * 100
+SINE$RoundDiv = floor(SINE$Divergence)
+SINE$Factor = paste(SINE$Subfamily, SINE$RoundDiv, sep = "$")
+```
+### General activity landscape
+Megabases occupied by each subfamilies vs divergence from consensus (Kimura2p)
+```{r}
+# calculate bps for each subfamily at each percentage of divergence
+SINE_bps = aggregate(Length ~ Factor, SINE, sum)
+SINE_bps$Subfamily = sapply(strsplit(SINE_bps$Factor, "\\$"), "[[", 1)
+SINE_bps$Divergence = sapply(strsplit(SINE_bps$Factor, "\\$"), "[[", 2)
+# conversion in megabases
+SINE_bps$Mb = SINE_bps$Length / 1000000
+SINE_bps_sub = SINE_bps[SINE_bps$Mb > 0.01,]
+data = SINE_bps_sub
+
+PATTERN = c("ACASINE2", "ACASINE2a", "ACASINE2b", "ACASINE2c", "ACASINE2d", "AmnSINE1", "AmnSINE2", "AnolisSINE2", "AnolisSINE2a", "AnolisSINE2c", "AnolisSINE2s", "cryI_aSpS", "cryIb_aSpS", "cryII_cMcP", "LFSINE_Vert", "MER131", "MIR_Aves1", "MIR_Aves2", "MIR1_Crp", "MIR1_Saur", "MIR1_tua", "SINE-2019-La_tua", "SINE-2019-Lb_tua", "SINE-2019-Lc_tua", "SINE-2019-Ld_tua", "SINE-2019_Crp", "SINE2-1_Croc", "SINE2-1_tua", "SINE2-2_ACar", "tuaCR1-SINE1a", "tuaCR1-SINE1b", "tuaMIR-a1", "tuaMIR-a2", "tuaMIR-a3", "tuaMIR-a4", "tuaMIR-b1", "tuaMIR-b2", "tuaMIR-b3", "tuaMIR-c1", "tuaMIR-c2", "tuaMIR-c3")
+REPLACEMENT = c("ACASINE2", "ACASINE2", "ACASINE2", "ACASINE2", "ACASINE2", "AmnSINE1", "AmnSINE2", "AnolisSINE2", "AnolisSINE2", "AnolisSINE2", "AnolisSINE2", "cryI", "cryI", "cryII", "LFSINE", "MER131", "MIR_Aves", "MIR_Aves", "MIR1_Crp", "MIR1_Saur", "MIR1_tua", "SINE-2019-L_tua", "SINE-2019-L_tua", "SINE-2019-L_tua", "SINE-2019-L_tua", "SINE-2019_Crp", "SINE2", "SINE2-1_tua", "SINE2", "tuaCR1-SINE1", "tuaCR1-SINE1", "tuaMIR", "tuaMIR", "tuaMIR", "tuaMIR", "tuaMIR", "tuaMIR", "tuaMIR", "tuaMIR", "tuaMIR", "tuaMIR")
+
+for(i in 1:length(PATTERN)){
+  
+  data$Superfamily[data$Subfamily == PATTERN[i]] = REPLACEMENT[i]
+}
+
+colsine = character()
+colfunc <- colorRampPalette(c("red3", "gold"))
+colsine = c(colsine, colfunc(4))
+colfunc <- colorRampPalette(c("darkgreen", "lightgreen"))
+colsine = c(colsine, colfunc(3))
+colfunc <- colorRampPalette(c("#08306B", "#6BAED6"))
+colsine = c(colsine, colfunc(4)[c(2,3,4)])
+colfunc <- colorRampPalette(c("#3F007D", "#BCBDDC"))
+colsine = c(colsine, colfunc(2))
+
+ggplot(data = data, aes(x = as.integer(Divergence), y = Mb, fill = factor(Superfamily))) + geom_bar(stat = "identity") + xlab("Divergence") + scale_fill_manual(name = "SINE Subamilies", values = as.character(colsine)) + theme_bw() + theme(panel.border = element_rect(colour = 'darkgrey', fill = NA))
+
+SINE_general_bps = ggplot(data = data, aes(x = as.integer(Divergence), y = Mb, fill = factor(Superfamily))) + geom_bar(stat = "identity") + xlab("Divergence") + scale_fill_manual(name = "SINE Subamilies", values = as.character(colsine))+ theme_bw() + theme(panel.border = element_rect(colour = 'darkgrey', fill = NA))
+ggsave(filename = 'Tuatara_SINE_landscape_bps_white.png', plot = SINE_general_bps, device = "png", width = 50, height = 27, units = "cm", scale = .5)
+```
+### SINE version 2.0
+```{r}
+#change levels order in Superfamily
+# ACASINE1, AmnSINE1, AnolisSINE2, LFSINE, SINE-2019-L_tua, SINE-2019_Crp, SINE2-1-_tua, tuaCR1-SINE1, MIR_Aves, MIR1_Crp, MIR1_Saur, tuaMIR
+data = SINE_bps_sub
+
+PATTERN = c("ACASINE2", "ACASINE2a", "ACASINE2b", "ACASINE2c", "ACASINE2d", "AmnSINE1", "AmnSINE2", "AnolisSINE2", "AnolisSINE2a", "AnolisSINE2c", "AnolisSINE2s", "cryI_aSpS", "cryIb_aSpS", "cryII_cMcP", "LFSINE_Vert", "MER131", "MIR_Aves1", "MIR_Aves2", "MIR1_Crp", "MIR1_Saur", "MIR1_tua", "SINE-2019-La_tua", "SINE-2019-Lb_tua", "SINE-2019-Lc_tua", "SINE-2019-Ld_tua", "SINE-2019_Crp", "SINE2-1_Croc", "SINE2-1_tua", "SINE2-2_ACar", "tuaCR1-SINE1a", "tuaCR1-SINE1b", "tuaMIR-a1", "tuaMIR-a2", "tuaMIR-a3", "tuaMIR-a4", "tuaMIR-b1", "tuaMIR-b2", "tuaMIR-b3", "tuaMIR-c1", "tuaMIR-c2", "tuaMIR-c3")
+REPLACEMENT = c("ACASINE2", "ACASINE2", "ACASINE2", "ACASINE2", "ACASINE2", "AmnSINE1", "AmnSINE2", "AnolisSINE2", "AnolisSINE2", "AnolisSINE2", "AnolisSINE2", "cryI", "cryI", "cryII", "LFSINE", "MER131", "MIR_Aves", "MIR_Aves", "MIR1_Crp", "MIR1_Saur", "MIR1_tua", "SINE-2019-L_tua", "SINE-2019-L_tua", "SINE-2019-L_tua", "SINE-2019-L_tua", "SINE-2019_Crp", "SINE2", "SINE2-1_tua", "SINE2", "tuaCR1-SINE1a", "tuaCR1-SINE1b", "tuaMIR", "tuaMIR", "tuaMIR", "tuaMIR", "tuaMIR", "tuaMIR", "tuaMIR", "tuaMIR", "tuaMIR", "tuaMIR")
+
+for(i in 1:length(PATTERN)){
+  
+  data$Superfamily[data$Subfamily == PATTERN[i]] = REPLACEMENT[i]
+}
+data$Superfamily = factor(x = data$Superfamily, levels = c("ACASINE2", "AmnSINE1", "AnolisSINE2", "LFSINE", "SINE-2019-L_tua", "SINE-2019_Crp", "SINE2-1_tua", "tuaCR1-SINE1a", "tuaCR1-SINE1b", "MIR_Aves", "MIR1_Crp", "MIR1_Saur", "tuaMIR"))
+
+colsine = character()
+colfunc <- colorRampPalette(c("red3", "gold"))
+colsine = c(colsine, colfunc(4))
+colfunc <- colorRampPalette(c("#08306B", "#6BAED6"))
+colsine = c(colsine, colfunc(6)[c(2,3,4,5,6)])
+colfunc <- colorRampPalette(c("darkgreen", "lightgreen"))
+colsine = c(colsine, colfunc(4)[c(1,2,3)])
+colfunc <- colorRampPalette(c("#3F007D", "#BCBDDC"))
+colsine = c(colsine, colfunc(2)[2])
+
+ggplot(data = data, aes(x = as.integer(Divergence), y = Mb, fill = factor(Superfamily))) + geom_bar(stat = "identity") + xlab("Divergence") + scale_fill_manual(name = "SINE Subfamilies", values = as.character(colsine)) + theme_bw() + theme(panel.border = element_rect(colour = 'darkgrey', fill = NA))
+ggsave(filename = 'Tuatara_SINE_landscape_bps_white_2.0.png', device = "png", width = 50, height = 27, units = "cm", scale = .5)
+```
+
+### SINE version 2.1
+```{r}
+#change levels order in Superfamily
+# ACASINE1, AmnSINE1, AnolisSINE2, LFSINE, SINE-2019-L_tua, SINE-2019_Crp, SINE2-1-_tua, tuaCR1-SINE1, MIR_Aves, MIR1_Crp, MIR1_Saur, tuaMIR
+data = SINE_bps_sub
+
+PATTERN = c("ACASINE2", "ACASINE2a", "ACASINE2b", "ACASINE2c", "ACASINE2d", "AmnSINE1", "AmnSINE2", "AnolisSINE2", "AnolisSINE2a", "AnolisSINE2c", "AnolisSINE2s", "cryI_aSpS", "cryIb_aSpS", "cryII_cMcP", "LFSINE_Vert", "MER131", "MIR_Aves1", "MIR_Aves2", "MIR1_Crp", "MIR1_Saur", "MIR1_tua", "SINE-2019-La_tua", "SINE-2019-Lb_tua", "SINE-2019-Lc_tua", "SINE-2019-Ld_tua", "SINE-2019_Crp", "SINE2-1_Croc", "SINE2-1_tua", "SINE2-2_ACar", "tuaCR1-SINE1a", "tuaCR1-SINE1b", "tuaMIR-a1", "tuaMIR-a2", "tuaMIR-a3", "tuaMIR-a4", "tuaMIR-b1", "tuaMIR-b2", "tuaMIR-b3", "tuaMIR-c1", "tuaMIR-c2", "tuaMIR-c3")
+REPLACEMENT = c("ACASINE2", "ACASINE2", "ACASINE2", "ACASINE2", "ACASINE2", "AmnSINE1", "AmnSINE2", "AnolisSINE2", "AnolisSINE2", "AnolisSINE2", "AnolisSINE2", "cryI", "cryI", "cryII", "LFSINE", "MER131", "MIR_Aves", "MIR_Aves", "MIR1_Crp", "MIR1_Saur", "MIR1_tua", "SINE-2019-L_tua", "SINE-2019-L_tua", "SINE-2019-L_tua", "SINE-2019-L_tua", "SINE-2019_Crp", "SINE2", "SINE2-1_tua", "SINE2", "tuaCR1-SINE1a", "tuaCR1-SINE1b", "tuaMIR-a1", "tuaMIR-a2", "tuaMIR-a3", "tuaMIR-a4", "tuaMIR-b1", "tuaMIR-b2", "tuaMIR-b3", "tuaMIR-c1", "tuaMIR-c2", "tuaMIR-c3")
+
+for(i in 1:length(PATTERN)){
+  
+  data$Superfamily[data$Subfamily == PATTERN[i]] = REPLACEMENT[i]
+}
+data$Superfamily = factor(x = data$Superfamily, levels = c("ACASINE2", "AmnSINE1", "AnolisSINE2", "LFSINE", "SINE-2019-L_tua", "SINE-2019_Crp", "SINE2-1_tua", "tuaCR1-SINE1a", "tuaCR1-SINE1b", "MIR_Aves", "MIR1_Crp", "MIR1_Saur", "tuaMIR-a1", "tuaMIR-a2", "tuaMIR-a3", "tuaMIR-a4", "tuaMIR-b1", "tuaMIR-b2", "tuaMIR-b3", "tuaMIR-c1", "tuaMIR-c2", "tuaMIR-c3"))
+
+colsine = character()
+colfunc <- colorRampPalette(c("red3", "gold"))
+colsine = c(colsine, colfunc(4))
+colfunc <- colorRampPalette(c("#08306B", "#6BAED6"))
+colsine = c(colsine, colfunc(6)[c(2,3,4,5,6)])
+colfunc <- colorRampPalette(c("darkgreen", "lightgreen"))
+colsine = c(colsine, colfunc(4)[c(1,2,3)])
+colfunc <- colorRampPalette(c("#3F007D", "#BCBDDC"))
+colsine = c(colsine, colfunc(10))
+
+ggplot(data = data, aes(x = as.integer(Divergence), y = Mb, fill = factor(Superfamily))) + geom_bar(stat = "identity") + xlab("Divergence") + scale_fill_manual(name = "SINE Subfamilies", values = as.character(colsine), breaks = c("ACASINE2", "AmnSINE1", "AnolisSINE2", "LFSINE", "SINE-2019-L_tua", "SINE-2019_Crp", "SINE2-1_tua", "tuaCR1-SINE1a", "tuaCR1-SINE1b", "MIR_Aves", "MIR1_Crp", "MIR1_Saur", "tuaMIR-a1"), labels = c("ACASINE2", "AmnSINE1", "AnolisSINE2", "LFSINE", "SINE-2019-L_tua", "SINE-2019_Crp", "SINE2-1_tua", "tuaCR1-SINE1a", "tuaCR1-SINE1b", "MIR_Aves", "MIR1_Crp", "MIR1_Saur", "tuaMIR [10 subfamilies merged]")) + theme_bw() + theme(panel.border = element_rect(colour = 'darkgrey', fill = NA))
+#ggplot(data = data, aes(x = as.integer(Divergence), y = Mb, fill = factor(Superfamily))) + geom_bar(stat = "identity") + xlab("Divergence") + scale_fill_manual(name = "SINE Subfamilies", values = as.character(colsine), breaks = c("ACASINE2", "AmnSINE1", "AnolisSINE2", "LFSINE", "SINE-2019-L_tua", "SINE-2019_Crp", "SINE2-1_tua", "tuaCR1-SINE1a", "tuaCR1-SINE1b", "MIR_Aves", "MIR1_Crp", "MIR1_Saur", "tuaMIR-a1"), labels = c("ACASINE2", "AmnSINE1", "AnolisSINE2", "LFSINE", "SINE-2019-L_tua", "SINE-2019_Crp", "SINE2-1_tua", "tuaCR1-SINE1a", "tuaCR1-SINE1b", "MIR_Aves", "MIR1_Crp", "MIR1_Saur", "tuaMIR [10 families merged]")) + theme_bw() + theme(panel.border = element_rect(colour = 'darkgrey', fill = NA))
+#ggsave(filename = 'Tuatara_SINE_landscape_bps_white_2.1.png', device = "png", width = 50, height = 27, units = "cm", scale = .5)
+ggsave(filename = 'Tuatara_SINE_landscape_bps_white_2.1.pdf', device = "pdf", width = 50, height = 27, units = "cm", scale = .5)
+```
+
+### SINE elements recent activity - all subfamilies
+```{r}
+SINE_bps$Divergence = as.integer(SINE_bps$Divergence)
+data = SINE_bps[SINE_bps$Divergence <= 5,]
+data$Subfamily = factor(x = data$Subfamily, levels = c("5S-Sauria", "ACASINE2", "ACASINE2a", "ACASINE2b", "ACASINE2d", "AmnSINE1", "AnolisSINE2", "AnolisSINE2a", "AnolisSINE2c", "cryI_aSpS", "cryII_cMcP", "LFSINE_Vert", "LmeSINE1c", "MER131", "SINE-2019-La_tua", "SINE-2019-Lb_tua", "SINE-2019-Lc_tua", "SINE-2019-Ld_tua", "SINE-2019_Crp", "SINE2-1_tua", "SINE2-2_ACar", "SINEU-1H_Croc", "TguSINE1", "tuaCR1-SINE1a", "tuaCR1-SINE1b", "MIR_Aves1", "MIR_Aves2", "MIR1_Crp", "MIR1_Saur", "MIR1_tua", "tuaMIR-a1", "tuaMIR-a2", "tuaMIR-a3", "tuaMIR-a4", "tuaMIR-b1", "tuaMIR-b2", "tuaMIR-b3", "tuaMIR-c1", "tuaMIR-c2", "tuaMIR-c3"))
+
+colsine = character()
+colfunc <- colorRampPalette(c("red3", "gold"))
+colsine = c(colsine, colfunc(14))
+colfunc <- colorRampPalette(c("#08306B", "#6BAED6"))
+colsine = c(colsine, colfunc(11))
+colfunc <- colorRampPalette(c("darkgreen", "lightgreen"))
+colsine = c(colsine, colfunc(5))
+colfunc <- colorRampPalette(c("#3F007D", "#BCBDDC"))
+colsine = c(colsine, colfunc(10))
+
+ggplot(data = data, aes(x = as.integer(Divergence), y = Mb, fill = factor(Subfamily))) + geom_bar(stat = "identity") + xlab("Divergence") + scale_fill_manual(name = "SINE Subfamilies", values = as.character(colsine))
+ggsave(filename = 'Tuatara_SINE_landscape_bps_recent_white.png', device = "png", width = 45, height = 30, units = "cm", scale = .5)
+```
+### SINE recent activity version 2.0
+```{r}
+SINE_bps$Divergence = as.integer(SINE_bps$Divergence)
+data = SINE_bps[SINE_bps$Divergence <= 5 & SINE_bps$Length >= 1000,]
+data$Subfamily = factor(x = data$Subfamily, levels = c("ACASINE2a", "SINE-2019-Lb_tua", "SINE-2019-Lc_tua", "SINE-2019_Crp", "tuaCR1-SINE1a", "tuaCR1-SINE1b", "MIR_Aves1", "tuaMIR-a1", "tuaMIR-a2", "tuaMIR-a3", "tuaMIR-a4", "tuaMIR-b1", "tuaMIR-b2", "tuaMIR-b3", "tuaMIR-c1", "tuaMIR-c2", "tuaMIR-c3"))
+
+colsine = character()
+colfunc <- colorRampPalette(c("red3", "gold"))
+colsine = c(colsine, colfunc(1))
+colfunc <- colorRampPalette(c("#08306B", "#6BAED6"))
+colsine = c(colsine, colfunc(5))
+colfunc <- colorRampPalette(c("darkgreen", "lightgreen"))
+colsine = c(colsine, colfunc(4)[2])
+colfunc <- colorRampPalette(c("#3F007D", "#BCBDDC"))
+colsine = c(colsine, colfunc(10))
+
+ggplot(data = data, aes(x = as.integer(Divergence), y = Mb, fill = factor(Subfamily))) + geom_bar(stat = "identity") + xlab("Divergence") + scale_fill_manual(name = "SINE Subfamilies", values = as.character(colsine)) + theme_bw() + theme(panel.border = element_rect(colour = 'darkgrey', fill = NA))
+ggsave(filename = 'Tuatara_SINE_landscape_bps_recent_white_2.0.png', device = "png", width = 45, height = 30, units = "cm", scale = .5)
+ggsave(filename = 'Tuatara_SINE_landscape_bps_recent_white_2.1.png', device = "png", width = 45, height = 30, units = "cm", scale = .5, dpi = 600)
+ggsave(filename = 'Tuatara_SINE_landscape_bps_recent_white_2.1.tiff', device = "tiff", width = 45, height = 30, units = "cm", scale = .5, dpi = 600)
+```
+
+
+## LINE2 elements
+```{r}
+LINE = fread(file = "C:/Users/valpe113/Documents/2017Tuatara/Report/2018FebFigures/tua_LINE.use", header = F, sep = "\t", stringsAsFactors = F)
+names(LINE) = c("Scaffold", "Begin", "End", "Length", "Strand", "Element", "Divergence", "ID")
+LINE = LINE[LINE$Divergence < 1,]
+```
+### General activity landscape
+```{r}
+LINE$Subfamily = sapply(strsplit(as.character(LINE$Element), "#"), "[[", 1)
+LINE$Superfamily = sapply(strsplit(LINE$Element, "#"), "[[", 2)
+LINE$Divergence = LINE$Divergence * 100
+LINE$RoundDiv = floor(LINE$Divergence)
+LINE$Factor = paste(LINE$Subfamily, LINE$RoundDiv, sep = "$")
+
+Cluster = unique(LINE$Subfamily)
+ranID = sample(Cluster, 14)
+LINE_subset <- LINE[LINE$Subfamily %in% ranID, ]
+
+# calculate bps for each subfamily at each percentage of divergence
+LINE_copy = LINE_subset %>% group_by(Factor) %>% summarise(count = n_distinct(ID))
+LINE_copy$Subfamily = sapply(strsplit(LINE_copy$Factor, "\\$"), "[[", 1)
+LINE_copy$Divergence = sapply(strsplit(LINE_copy$Factor, "\\$"), "[[", 2)
+LINE_copy_sub = LINE_copy[LINE_copy$count >= 100,]
+LINE_bps = aggregate(Length ~ Factor, LINE_subset, sum)
+LINE_bps$Subfamily = sapply(strsplit(LINE_bps$Factor, "\\$"), "[[", 1)
+LINE_bps$Divergence = sapply(strsplit(LINE_bps$Factor, "\\$"), "[[", 2)
+# conversion in megabases
+LINE_bps$Mb = LINE_bps$Length / 1000000
+LINE_bps_sub = LINE_bps[LINE_bps$Mb > 0.01,]
+
+data = LINE_bps[as.integer(LINE_bps$Divergence) <= 50 & LINE_bps$Length >= 1000,]
+
+colline = character()
+colfunc <- colorRampPalette(c("darkgreen", "lightgreen"))
+colline = c(colline, colfunc(3))
+colfunc <- colorRampPalette(c("red3", "gold"))
+colline = c(colline, colfunc(4))
+colfunc <- colorRampPalette(c("#6BAED6", "#08306B"))
+colline = c(colline, colfunc(3))
+colfunc <- colorRampPalette(c("#3F007D", "#BCBDDC"))
+colline = c(colline, colfunc(4))
+
+ggplot(data = data, aes(x = as.integer(Divergence), y = Mb, fill = factor(Subfamily))) + geom_bar(stat = "identity") + xlab("Divergence") + scale_fill_manual(name = "L2 Subfamilies", values = as.character(colline)) + theme_bw() + theme(panel.border = element_rect(colour = 'darkgrey', fill = NA))
+
+L2_general_bps = ggplot(data = data, aes(x = as.integer(Divergence), y = Mb, fill = factor(Subfamily))) + geom_bar(stat = "identity") + xlab("Divergence") + scale_fill_manual(name = "L2 Subfamilies", values = as.character(colline)) + theme_bw() + theme(panel.border = element_rect(colour = 'darkgrey', fill = NA))
+ggsave(filename = 'Tuatara_L2_landscape_bps_white.png', plot = L2_general_bps, device = "png", width = 50, height = 27, units = "cm", scale = .5)
+```
+
+```{r}
+library(data.table)
+library(dplyr)
+library(ggplot2)
+library(RColorBrewer)
+library(dplyr)
+setwd("./")
+LINE = fread(file = "tua_LINE-rename.use", header = F, sep = "\t", stringsAsFactors = F)
+names(LINE) = c("Scaffold", "Begin", "End", "Length", "Strand", "Element", "Divergence", "ID")
+head(LINE)
+```
+```{r}
+LINE = LINE[LINE$Divergence < 1,]
+```
+
+```{r}
+LINE$Subfamily = sapply(strsplit(as.character(LINE$Element), "#"), "[[", 1)
+LINE$Superfamily = sapply(strsplit(LINE$Element, "#"), "[[", 2)
+LINE$Divergence = LINE$Divergence * 100
+LINE$RoundDiv = floor(LINE$Divergence)
+LINE$Factor = paste(LINE$Subfamily, LINE$RoundDiv, sep = "$")
+
+Cluster = unique(LINE$Subfamily)
+ranID = sample(Cluster, 27)
+LINE_subset <- LINE[LINE$Subfamily %in% ranID, ]
+
+# calculate bps for each subfamily at each percentage of divergence
+LINE_copy = LINE_subset %>% group_by(Factor) %>% summarise(count = n_distinct(ID))
+LINE_copy$Subfamily = sapply(strsplit(LINE_copy$Factor, "\\$"), "[[", 1)
+LINE_copy$Divergence = sapply(strsplit(LINE_copy$Factor, "\\$"), "[[", 2)
+LINE_copy_sub = LINE_copy[LINE_copy$count >= 100,]
+LINE_bps = aggregate(Length ~ Factor, LINE_subset, sum)
+LINE_bps$Subfamily = sapply(strsplit(LINE_bps$Factor, "\\$"), "[[", 1)
+LINE_bps$Divergence = sapply(strsplit(LINE_bps$Factor, "\\$"), "[[", 2)
+# conversion in megabases
+LINE_bps$Mb = LINE_bps$Length / 1000000
+LINE_bps_sub = LINE_bps[LINE_bps$Mb > 0.01,]
+```
+Megabases occupied by each subfamilies vs divergence from consensus (Kimura2p)
+```{r}
+data = LINE_bps[as.integer(LINE_bps$Divergence) <= 50 & LINE_bps$Length >= 1000,]
+colori = data %>% group_by(Subfamily)
+colori$col = "Red"
+serie = character()
+
+#L2_AC
+colfunc <- colorRampPalette("grey")
+serie = c(serie, colfunc(1))
+#L2_CPB
+colfunc <- colorRampPalette(c("#6BAED6", "#08306B"))
+serie = c(serie, colfunc(6))
+#L2_Plat
+colfunc <- colorRampPalette(c("darkgreen", "lightgreen"))
+serie = c(serie, colfunc(4))
+#L2_ACar
+colfunc <- colorRampPalette(c("#BCBDDC", "#3F007D"))
+serie = c(serie, colfunc(16))
+serie = data.frame(col = serie, subfamily = names(table(colori$Subfamily)))
+
+
+colline = character()
+colfunc <- colorRampPalette(c("darkgreen", "lightgreen"))
+colline = c(colline, colfunc(4))
+colfunc <- colorRampPalette(c("red3", "gold"))
+colline = c(colline, colfunc(12))
+colfunc <- colorRampPalette(c("#6BAED6", "#08306B"))
+colline = c(colline, colfunc(7))
+colfunc <- colorRampPalette(c("#3F007D", "#BCBDDC"))
+colline = c(colline, colfunc(4))
+
+```
+
+```{r}
+ggplot(data = data, aes(x = as.integer(Divergence), y = Mb, fill = factor(Subfamily))) + geom_bar(stat = "identity") + xlab("Divergence") + scale_fill_manual(name = "L2 Subfamilies", values = as.character(colline)) + theme_bw() + theme(panel.border = element_rect(colour = 'darkgrey', fill = NA))
+```
+```{r}
+#ggsave(filename = 'Tuatara_L2_general_landscape_bps_white.png', device = "png", width = 50, height = 27, units = "cm", scale = .5)
+ggsave(filename = 'Tuatara_L2_general_landscape_bps_white.pdf', device = "pdf", width = 50, height = 27, units = "cm", scale = .5)
+```
+
+## 0 activity DNA
+```{r, only_0_DNA}
+tua0_DNA = TUATARA[TUATARA$Divergence <0.01 & grepl(pattern = "DNA", x = TUATARA$Element),]
+
+tua0_DNA$Subfamily = sapply(strsplit(as.character(tua0_DNA$Element), "#"), "[[", 1)
+tua0_DNA$Superfamily = sapply(strsplit(as.character(tua0_DNA$Element), "#"), "[[", 2)
+tua0_DNA$Divergence = tua0_DNA$Divergence * 100
+tua0_DNA$RoundDiv = floor(tua0_DNA$Divergence)
+tua0_DNA$Factor = paste(tua0_DNA$Subfamily, tua0_DNA$RoundDiv, sep = "$")
+
+
+# calculate bps for each subfamily at each percentage of divergence
+tua0_DNA_copy = tua0_DNA %>% group_by(Factor) %>% summarise(count = n_distinct(ID))
+
+tua0_DNA_copy$Subfamily = sapply(strsplit(tua0_DNA_copy$Factor, "\\$"), "[[", 1)
+tua0_DNA_copy$Divergence = sapply(strsplit(tua0_DNA_copy$Factor, "\\$"), "[[", 2)
+```
+
+```{r, only_0_DNA_plot}
+data = tua0_DNA_copy[tua0_DNA_copy$count >= 10,]
+
+data$Subfamily = factor(x = data$Subfamily, levels = c("Chompy-2a_tua", "Harbinger-2-L_tua", "Harbinger-3-L_tua", "hAT-13_tua", "hAT-1N1_AC", "hAT-208_Ami", "hAT-21_CPB", "hAT-310_Ami", "hAT-66-L-tua", "hAT-N16_AMi", "hAT-N6_ACar", "hATN-3-La_tua", "hATN-3-Lc_tua", "hATN-3-Ld_tua", "nhAT-3-Lb_tua","MER45B-L_tua", "MER45R-La_tua", "MER58D-L_tua", "piggyBac-1-Lb_tua", "tuaDNA11", "tuaDNA12", "tuaDNA13", "tuaDNA1a", "tuaDNA1b", "tuaDNA1c", "tuaDNA1d", "tuaDNA20", "tuaDNA21", "tuaDNA22", "tuaDNA23", "tuaDNA2a", "tuaDNA2b", "tuaDNA3a", "tuaDNA3b", "tuaDNA4", "tuaDNA5", "tuaDNA6", "tuaDNA7", "tuaDNA8", "tuaDNA9", "tuaDNAL-1"))
+
+colsine = character()
+colfunc <- colorRampPalette(c("red3", "gold"))
+colsine = c(colsine, colfunc(7))
+colfunc <- colorRampPalette(c("#08306B", "#6BAED6"))
+colsine = c(colsine, colfunc(8))
+colfunc <- colorRampPalette(c("darkgreen", "lightgreen"))
+colsine = c(colsine, colfunc(4))
+colfunc <- colorRampPalette(c("#3F007D", "#BCBDDC"))
+colsine = c(colsine, colfunc(22))
+
+coldna = character()
+colfunc <- colorRampPalette(c("#BCBDDC", "#3F007D"))
+coldna = c(coldna, colfunc(5)[c(1,2,4)])
+colfunc <- colorRampPalette(c("lightgreen", "darkgreen"))
+coldna = c(coldna, colfunc(15))
+colfunc <- colorRampPalette(c("#6BAED6", "#08306B"))
+coldna = c(coldna, colfunc(3)[2])
+colfunc <- colorRampPalette(c("gold", "red3"))
+coldna = c(coldna, colfunc(22))
+
+ggplot(data = data, aes(x = as.integer(Divergence), y = count, fill = factor(Subfamily))) + geom_bar(stat = "identity") + xlab("Divergence") + scale_fill_manual(name = "DNA Subfamilies", values = as.character(coldna), breaks = c("Chompy-2a_tua", "Harbinger-2-L_tua", "Harbinger-3-L_tua", "hAT-13_tua", "hAT-1N1_AC", "hAT-208_Ami", "hAT-21_CPB", "hAT-310_Ami", "hAT-66-L-tua", "hAT-N16_AMi", "hAT-N6_ACar", "hATN-3-La_tua", "hATN-3-Lc_tua", "hATN-3-Ld_tua", "nhAT-3-Lb_tua", "MER45B-L_tua", "MER45R-La_tua", "MER58D-L_tua", "piggyBac-1-Lb_tua", "tuaDNA11"), labels = c("Chompy-2a_tua", "Harbinger-2-L_tua", "Harbinger-3-L_tua", "hAT-13_tua", "hAT-1N1_AC", "hAT-208_Ami", "hAT-21_CPB", "hAT-310_Ami", "hAT-66-L-tua", "hAT-N16_AMi", "hAT-N6_ACar", "hATN-3-La_tua", "hATN-3-Lc_tua", "hATN-3-Ld_tua", "nhAT-3-Lb_tua", "MER45B-L_tua", "MER45R-La_tua", "MER58D-L_tua", "piggyBac-1-Lb_tua", "tuaDNA [22 families merged]")) + theme_bw() + theme(panel.border = element_rect(colour = 'darkgrey', fill = NA)) +ylab("Number of insertions")
+
+#ggsave(filename = 'Tuatara_DNA_0_divergence.png', device = "png", width = 20, height = 30, units = "cm", scale = .5)
+
+ggsave(filename = 'Tuatara_DNA_0_divergence_2.0.pdf', device = "pdf", width = 20, height = 30, units = "cm", scale = .5)
+ggsave(filename = 'Tuatara_DNA_0_divergence_2.1.pdf', device = "pdf", width = 20, height = 30, units = "cm", scale = .5, dpi = 600)
+ggsave(filename = 'Tuatara_DNA_0_divergence_2.1.png', device = "png", width = 20, height = 30, units = "cm", scale = .5, dpi = 600)
+ggsave(filename = 'Tuatara_DNA_0_divergence_2.1.tiff', device = "tiff", width = 20, height = 30, units = "cm", scale = .5, dpi = 600)
+```
+
+## 0 activity SINE
+```{r, only_0_SINE}
+tua0_SINE = TUATARA[TUATARA$Divergence <0.01 & grepl(pattern = "SINE", x = TUATARA$Element),]
+
+tua0_SINE$Subfamily = sapply(strsplit(as.character(tua0_SINE$Element), "#"), "[[", 1)
+tua0_SINE$Superfamily = sapply(strsplit(as.character(tua0_SINE$Element), "#"), "[[", 2)
+tua0_SINE$Divergence = tua0_SINE$Divergence * 100
+tua0_SINE$RoundDiv = floor(tua0_SINE$Divergence)
+tua0_SINE$Factor = paste(tua0_SINE$Subfamily, tua0_SINE$RoundDiv, sep = "$")
+
+
+# calculate bps for each subfamily at each percentage of divergence
+tua0_SINE_copy = tua0_SINE %>% group_by(Factor) %>% summarise(count = n_distinct(ID))
+
+tua0_SINE_copy$Subfamily = sapply(strsplit(tua0_SINE_copy$Factor, "\\$"), "[[", 1)
+tua0_SINE_copy$Divergence = sapply(strsplit(tua0_SINE_copy$Factor, "\\$"), "[[", 2)
+```
+
+```{r, only_0_SINE_plot}
+data = tua0_SINE_copy[tua0_SINE_copy$count >= 10,]
+
+temp_levels = levels(factor(data$Subfamily))
+temp_levels = temp_levels[c(1,3,4,5,6,2,7:14)]
+data$Subfamily = factor(x = data$Subfamily, levels = temp_levels)
+
+colsine = character()
+colfunc <- colorRampPalette(c("red3", "gold"))
+colsine = c(colsine, colfunc(14)[8])
+colfunc <- colorRampPalette(c("#08306B", "#6BAED6"))
+colsine = c(colsine, colfunc(4))
+colfunc <- colorRampPalette(c("darkgreen", "lightgreen"))
+colsine = c(colsine, colfunc(5)[1])
+colfunc <- colorRampPalette(c("#3F007D", "#BCBDDC"))
+colsine = c(colsine, colfunc(8))
+
+ggplot(data = data, aes(x = as.integer(Divergence), y = count, fill = factor(Subfamily))) + geom_bar(stat = "identity") + xlab("Divergence") + scale_fill_manual(name = "SINE Subfamilies", values = as.character(colsine)) + theme_bw() + theme(panel.border = element_rect(colour = 'darkgrey', fill = NA)) +ylab("Number of insertions")
+
+ggsave(filename = 'Tuatara_SINE_0_divergence.png', device = "png", width = 16, height = 30, units = "cm", scale = .5)
+ggsave(filename = 'Tuatara_SINE_0_divergence_2.0.png', device = "png", width = 16, height = 30, units = "cm", scale = .5, dpi = 600)
+ggsave(filename = 'Tuatara_SINE_0_divergence_2.0.tiff', device = "tiff", width = 16, height = 30, units = "cm", scale = .5, dpi = 600)
+```
+

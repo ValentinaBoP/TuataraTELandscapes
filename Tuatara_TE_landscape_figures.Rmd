@@ -1,6 +1,6 @@
 ---
 title: "Tuatara TE Landscape"
-author: "Valentina"
+author: "Valentina Peona"
 date: "March 26, 2018"
 output:
   html_document:
